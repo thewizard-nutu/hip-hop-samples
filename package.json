@@ -1,0 +1,26 @@
+{
+  "name": "hip-hop-samples",
+  "version": "1.0.0",
+  "description": "Hip-Hop Drum Samples Marketplace - Next.js + Node.js + MongoDB + Stripe + AWS S3",
+  "private": true,
+  "license": "MIT",
+  "workspaces": [
+    "apps/frontend",
+    "apps/backend",
+    "apps/qa"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w apps/frontend & npm run dev -w apps/backend",
+    "build": "npm run build -w apps/frontend && npm run build -w apps/backend",
+    "test": "npm test -w apps/backend && npm test -w apps/qa",
+    "test:frontend": "npm test -w apps/frontend",
+    "test:backend": "npm test -w apps/backend",
+    "test:qa": "npm test -w apps/qa",
+    "test:e2e": "npm run e2e -w apps/frontend",
+    "lint": "npm run lint -w apps/frontend && npm run lint -w apps/backend"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

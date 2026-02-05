@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: hip-hop-samples-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: mongodb123
+      MONGO_INITDB_DATABASE: hiphopdrumsdb
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hip-hop-network
+
+  # Backend API (Node.js/Express)
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: hip-hop-samples-backend
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      MONGODB_URI: mongodb://admin:mongodb123@mongodb:27017/hiphopdrumsdb?authSource=admin
+      JWT_SECRET: dev-secret-key-change-in-production
+      JWT_EXPIRES_IN: 7d
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_placeholder}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-pk_test_placeholder}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_placeholder}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-placeholder}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-placeholder}
+      AWS_BUCKET_NAME: ${AWS_BUCKET_NAME:-hip-hop-samples}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./apps/backend/src:/app/src
+      - ./apps/backend/node_modules:/app/node_modules
+    networks:
+      - hip-hop-network
+    healthcheck:
+      test: curl -f http://localhost:3001/health || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    container_name: hip-hop-samples-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:3001
+      NEXT_PUBLIC_STRIPE_PUBLIC_KEY: ${NEXT_PUBLIC_STRIPE_PUBLIC_KEY:-pk_test_placeholder}
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - ./apps/frontend/src:/app/src
+      - ./apps/frontend/node_modules:/app/node_modules
+    networks:
+      - hip-hop-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  hip-hop-network:
+    driver: bridge

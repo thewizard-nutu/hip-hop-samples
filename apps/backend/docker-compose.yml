@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:6
+    container_name: hip-hop-samples-db
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: hip-hop-samples-dev
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    container_name: hip-hop-samples-api
+    ports:
+      - "3001:3001"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      MONGODB_URI: mongodb://mongodb:27017/hip-hop-samples-dev
+      JWT_SECRET: dev-secret-key-change-in-production
+      JWT_EXPIRE: 7d
+      BCRYPT_ROUNDS: 10
+      STRIPE_MODE: test
+      STRIPE_SECRET_KEY: sk_test_placeholder
+      STRIPE_PUBLISHABLE_KEY: pk_test_placeholder
+      STRIPE_WEBHOOK_SECRET: whsec_placeholder
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: placeholder
+      AWS_SECRET_ACCESS_KEY: placeholder
+      AWS_S3_BUCKET: hip-hop-samples
+      AWS_S3_SIGNED_URL_EXPIRY: 86400
+      CORS_ORIGIN: http://localhost:3000
+      LOG_LEVEL: debug
+    volumes:
+      - ./src:/app/src
+      - ./logs:/app/logs
+    healthcheck:
+      test: curl -f http://localhost:3001/api/auth/verify || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  mongo_data:
+    driver: local
